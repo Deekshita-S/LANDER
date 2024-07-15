@@ -18,6 +18,8 @@ from PIL import Image
 import pickle
 from methods.generator import NLGenerator, NLGenerator_IN
 import shutil
+from scipy.stats import entropy
+
 
 bn_mmt = 0.9
 tau = 2
@@ -447,7 +449,7 @@ class NAYER():
             with torch.no_grad():
                 if best_cost > loss.item() or best_inputs is None:
                     best_cost = loss.item()
-                    best_inputs = inputs.data
+                    best = inputs.data
                     best_t_out=t_out
 
             optimizer.zero_grad()
