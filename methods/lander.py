@@ -361,6 +361,9 @@ class NAYER():
         self.ep_start = self.args['warmup'] + 1 # need more time to the student train well.
         self.prev_z = None
 
+        self.best_imgs={}
+        self.best_entropy={}
+
         if self.args["dataset"] == "imagenet":
             self.aug = transforms.Compose([
                 augmentation.RandomCrop(size=[self.img_size[-2], self.img_size[-1]], padding=4),
@@ -445,6 +448,7 @@ class NAYER():
                 if best_cost > loss.item() or best_inputs is None:
                     best_cost = loss.item()
                     best_inputs = inputs.data
+                    best_t_out=t_out
 
             optimizer.zero_grad()
             loss.backward()
