@@ -5,7 +5,7 @@ from utils.tiny_imagenet import TinyImageNet
 import os
 
 
-data_dir = os.path.join(os.environ['HOME'],"../datasets")
+data_dir = os.path.join(os.environ['HOME'],"/DATA2/deekshita/LANDER/datasets")
 # data_dir = os.path.join(os.environ['HOME'],"datasets")
 # data_dir = "../../data"
 
