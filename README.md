@@ -1,35 +1,38 @@
 ## The source code for "Text-Enhanced Data-free Approach for Federated Class-Incremental Learning" accepted by CVPR 2024.
 ## Paper link: https://arxiv.org/abs/2403.14101
 
-# Reproducing
-We test the code on RTX 4090 GPU with pytorch: 
-```
-torch==2.0.1
-torchvision==0.15.2
-```
+This repository contains modifications to the original LANDER code to address limitations related to communication overhead and training load.
 
-## Baseline
-Here, we provide a simple example for different methods. 
-For example, for `cifar100-5tasks`, please run the following commands to test the model performance with non-IID (`$\beta=0.5$`) data.
+### Original Code
+The original implementation can be found [here](https://github.com/tmtuan1307/LANDER) .
 
-```
-#!/bin/bash
-# method= ["finetue", "lwf", "ewc", "icarl", "target"]
+### Objective
+The primary limitation addressed in this work is the need to store and transfer a large amount of synthetic data from the server to the client, thereby increasing communication costs and the training load for the client. 
 
-CUDA_VISIBLE_DEVICES=0 python main.py --group=c100t5 --exp_name=$method_b05 --dataset cifar100 --method=$method --tasks=5 --num_users 5 --beta=0.5
-```
+### Contributions
+code changes are made in lander.py file in methods folder
 
-### Ours
-```
-CUDA_VISIBLE_DEVICES=0 python main.py --group=c100t5 --exp_name=lander_b05 --dataset cifar100 --method=lander --tasks=5 --num_users 5 --beta=0.5
-```
+1. Reducing Communication Overhead
+#### Entropy-Based Image Selection:
+- Calculated the entropy of each image by first computing the probabilities using the logits (output of ResNet).
+- Stored the calculated entropies in dictionaries(for images and entropies separatel) where keys represent classes and values are tuples of images and their corresponding entropies.
+- Selected and stored only half of the images with the lowest entropy, reducing the number of images sent to the client by half.
+2. Adding Proximal Term in Loss Function
+#### Proximal Term in Local Fine-Tune Method:
+- Introduced a proximal term to penalize the difference between the current model parameters and the teacher model parameters.
+- Updated the loss function to include the proximal term
+3. Additional Methods in ImagePool Class
+#### store_lowest_entropy_images:
 
-## Citation:
-  ```
-@article{lander,
-  title={Text-Enhanced Data-free Approach for Federated Class-Incremental Learning},
-  author={Tran, Minh-Tuan and Le, Trung and Le, Xuan-May and Harandi, Mehrtash and Phung, Dinh},
-  journal={arXiv preprint arXiv:2403.14101},
-  year={2024}
-}
-  ```
+- Deleted all previously stored synthesized images.
+- Selected and stored only half of the images with the lowest entropy.
+#### folder_size:
+
+- Calculated the size of the folder containing the stored images.
+
+### Usage
+To use this modified implementation, clone the repository and follow the instructions in the original README.
+
+
+This work builds upon the original LANDER implementation. I acknowledge the authors of the original paper and implementation for their contributions.
+
