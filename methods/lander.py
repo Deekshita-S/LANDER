@@ -615,6 +615,7 @@ class LANDER(BaseLearner):
                 mt = synthesizer.get_teacher()
                 test_acct = self._compute_accuracy(mt, self.test_loader)
                 print("Student Test Acc: %s - %s" % (test_accs, test_acct))
+                wandb.init(mode='disabled')
                 wandb.log({'Task_{}, Student Accuracy'.format(self._cur_task): test_accs})
 
         print("For task {}, data generation completed! ".format(self._cur_task))
@@ -702,6 +703,7 @@ class LANDER(BaseLearner):
                                                                    test_new_acc))
             print("Task {} =>  Test_accy {:.2f}".format(self._cur_task, test_acc, ))
             if self.wandb == 1:
+                wandb.init(mode='disabled')
                 wandb.log({'Task_{}, accuracy'.format(self._cur_task): test_acc})
         else:
             self._fl_train(train_dataset, self.test_loader)
@@ -731,7 +733,7 @@ class LANDER(BaseLearner):
             for idx in idxs_users:
                 local_train_loader = DataLoader(DatasetSplit(train_dataset, user_groups[idx]),
                                                 batch_size=self.args["local_bs"], shuffle=True, num_workers=self.args["num_worker"],
-                                                pin_memory=True, multiprocessing_context=self.args["mulc"], persistent_workers=True)
+                                                pin_memory=False, multiprocessing_context=self.args["mulc"], persistent_workers=True)
                 if self._cur_task == 0:
                     w, total_loss = self._local_update(copy.deepcopy(self._network), local_train_loader, scheduler.get_last_lr()[0])
                 else:
@@ -767,6 +769,7 @@ class LANDER(BaseLearner):
                     self._cur_task, com + 1, self.args["com_round"], test_acc, ))
                 prog_bar.set_description(info)
                 if self.wandb == 1:
+                    wandb.init(mode='disabled')
                     wandb.log({'Task_{}, accuracy'.format(self._cur_task): test_acc})
         self._network.load_state_dict(self.best_model)  # Best model using the lowest training loss
         del self.best_model
