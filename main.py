@@ -58,6 +58,23 @@ def train(args):
         print("CNN: {}".format(cnn_accy["grouped"]))
         cnn_curve["top1"].append(cnn_accy["top1"])
         print("CNN top1 curve: {}".format(cnn_curve["top1"]))
+        # File path to save the results - added by Deekshita
+        results=["CNN: {}".format(cnn_accy["grouped"]),"CNN top1 curve: {}".format(cnn_curve["top1"]) ]
+
+        
+        dir_Result = "Results"
+    
+        os.makedirs(dir_Result, exist_ok=True)
+
+        # Construct file path
+        file_path = os.path.join(dir_Result, args["dataset"] + "_" + str(args["beta"]) + "_task%s.txt" % task)
+
+
+        # Open the file in write mode
+        with open(file_path, 'w') as file:
+            # Write each result to a new line in the file
+            for result in results:
+                file.write(result + "\n")
 
 
 def args_parser():
