@@ -385,7 +385,7 @@ class NAYER():
             if isinstance(m, nn.BatchNorm2d):
                 self.hooks.append(DeepInversionHook(m, self.bn_mmt))
 
-    def synthesize(self, _cur_task=0):
+    def synthesize(self, _cur_task=0,itr=0):
         self._cur_task = _cur_task
         self.ep += 1
         self.student.eval()
@@ -704,7 +704,7 @@ class LANDER(BaseLearner):
                             args=self.args, label_emb=self.label_emb)
 
         for it in range(self.args['syn_round'] + self.args['warmup']):
-            synthesizer.synthesize(self._cur_task)  # generate synthetic data
+            synthesizer.synthesize(self._cur_task,it)  # generate synthetic data
             if it > self.args['warmup']:
                 ms = synthesizer.get_student()
                 test_accs = self._compute_accuracy(ms, self.test_loader)
