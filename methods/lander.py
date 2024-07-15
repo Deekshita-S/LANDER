@@ -955,7 +955,13 @@ class LANDER(BaseLearner):
                     tau,
                 )
                 s_loss_f = torch.nn.functional.mse_loss(s_f, t_f.detach())
-                loss = cur * (loss_ce_cur + self.ltc * c_loss_f) + pre * (loss_kd + s_loss_f)
+                
+                proximal_term = 0.0
+                for w, w_t in zip(model.parameters(), teacher.parameters()):
+                    if w.shape == w_t.shape:
+                        proximal_term += (w - w_t).norm(2)
+
+                loss = cur * (loss_ce_cur + self.ltc * c_loss_f) + pre * (loss_kd + s_loss_f) + 0.0001* proximal_term
 
                 optimizer.zero_grad()
                 loss.backward()
