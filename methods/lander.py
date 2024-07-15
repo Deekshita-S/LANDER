@@ -238,10 +238,11 @@ class DeepInversionHook():
 
 
 class ImagePool(object):
-    def __init__(self, root):
+    def __init__(self, root,nums):
         self.root = os.path.abspath(root)
         os.makedirs(self.root, exist_ok=True)
         self._idx = 0
+        self.nums=nums # added deekshita
 
     def add(self, imgs, targets=None):
         save_image_batch(imgs, os.path.join(self.root, "%d.png" % (self._idx)), pack=False)
@@ -249,6 +250,65 @@ class ImagePool(object):
 
     def get_dataset(self, nums=None, transform=None, labeled=True):
         return UnlabeledImageDataset(self.root, transform=transform, nums=nums)
+        
+    def store_lowest_entropy_images(self,best_imgs,best_entropy,no_classes_known,device): # added deekshita
+        # Delete all image files in the directory
+        for filename in os.listdir(self.root):
+            file_path = os.path.join(self.root, filename)
+            try:
+                if os.path.isfile(file_path) or os.path.islink(file_path):
+                    os.remove(file_path)
+                elif os.path.isdir(file_path):
+                    shutil.rmtree(file_path)
+                    print(f"Deleted directory {file_path}")
+            except Exception as e:
+                print(f"Failed to delete {file_path}. Reason: {e}")
+    
+        
+        self._idx =0   
+        img_per_class=self.nums//no_classes_known
+        
+
+        for t in best_imgs:
+            
+            ind=best_entropy[t].argsort()        
+            best_imgs[t]=best_imgs[t][ind][:(img_per_class//2)]
+            permuted_indices = torch.randperm(best_imgs[t].size(0)) # shuffle class images
+            best_imgs[t]=best_imgs[t][permuted_indices]
+            
+        
+        total_images = 5248 #half the no. of images synthesized (41*256/2)
+
+
+        images_per_class = round(total_images/no_classes_known) 
+
+        total_batches = round(total_images / 128) 
+
+        images_per_class_per_batch = round(images_per_class / total_batches) 
+        
+        k=0
+        for i in range(total_batches):
+            # each batch must have equal images from each class
+            best_inputs = torch.empty((0)).to(device)
+            for t in best_imgs:
+                best_inputs=torch.cat((best_inputs,best_imgs[t][k:(k+images_per_class_per_batch)]),dim=0)
+            k+=images_per_class_per_batch
+            permuted_indices = torch.randperm(best_inputs.size(0))
+            best_inputs=best_inputs[permuted_indices]
+            self.add(best_inputs)
+        self.folder_size()
+
+    def folder_size(self):# added deekshita
+        size = 0
+        print('root dir',self.root)
+        # get size
+        for path, dirs, files in os.walk(self.root):
+            for f in files:
+                fp = os.path.join(path, f)
+                size += os.path.getsize(fp)
+        
+        # display size
+        print("Folder size: " ,size)
 
 def kldiv(logits, targets, T=1.0, reduction='batchmean'):
     q = F.log_softmax(logits / T, dim=1)
@@ -294,7 +354,7 @@ class NAYER():
         self.synthesis_batch_size = synthesis_batch_size
         self.normalizer = normalizer
 
-        self.data_pool = ImagePool(root=self.save_dir)
+        self.data_pool = ImagePool(root=self.save_dir,nums=self.args['nums'])
         self.transform = transform
         self.generator = generator.cuda().train()
         self.ep = 0
@@ -395,8 +455,40 @@ class NAYER():
                 h.update_mmt()
 
         if self.args['warmup'] <= self.ep:
-            self.data_pool.add(best_inputs)
-            self.student_train(self.student, self.teacher)
+                    self.data_pool.add(best)
+
+                    # added deekshita
+                    #calculating entropy of each image
+                    prediction = torch.nn.functional.softmax(best_t_out, dim=1)
+                    
+                    temp=[]
+                    for pred in prediction:
+                        pred=pred.cpu()
+                        pred=pred.detach().numpy()
+                        p=entropy(pred,base=2)
+                        temp.append(p)
+                    
+                    temp=np.array(temp) # entropy of each image in a batch
+                    
+
+                    for t in torch.unique(targets):
+                        t=t.item()
+                        
+                        index=torch.squeeze((targets== t).nonzero(as_tuple=False)).cpu()
+                        if  t not in self.best_imgs:
+                            self.best_imgs[t]=best[index]
+                            self.best_entropy[t]=temp[index]
+                            
+                        else:
+                            
+                            self.best_imgs[t]=torch.cat((self.best_imgs[t],best[index]),dim=0)
+                            self.best_entropy[t]=np.append(self.best_entropy[t],temp[index])
+
+                    self.student_train(self.student, self.teacher)
+
+        if itr==(self.args['syn_round'] + self.args['warmup'])-1:
+            self.data_pool.store_lowest_entropy_images(self.best_imgs,self.best_entropy,no_classes_known=list(torch.unique(targets).shape)[0],device=self.device)
+
 
     def student_train(self, student, teacher):
         optimizer = torch.optim.SGD(student.parameters(), lr=0.1, momentum=0.9, weight_decay=0.0002)
