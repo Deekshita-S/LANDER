@@ -311,6 +311,19 @@ class ImagePool(object):
         
         # display size
         print("Folder size: " ,size)
+        dir_Result = "Folder_size"
+    
+        os.makedirs(dir_Result, exist_ok=True)
+
+        # Construct file path
+        file_path = os.path.join(dir_Result,"task%s.txt" % task)
+        
+
+
+        # Open the file in write mode
+        with open(file_path, 'w') as file:
+            # Write each result to a new line in the file
+            file.write(str(size) + "\n")
 
 def kldiv(logits, targets, T=1.0, reduction='batchmean'):
     q = F.log_softmax(logits / T, dim=1)
