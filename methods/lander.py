@@ -253,7 +253,7 @@ class ImagePool(object):
     def get_dataset(self, nums=None, transform=None, labeled=True):
         return UnlabeledImageDataset(self.root, transform=transform, nums=nums)
         
-    def store_lowest_entropy_images(self,best_imgs,best_entropy,no_classes_known,device): # added deekshita
+    def store_lowest_entropy_images(self,best_imgs,best_entropy,no_classes_known,device,task): # added deekshita
         # Delete all image files in the directory
         for filename in os.listdir(self.root):
             file_path = os.path.join(self.root, filename)
@@ -298,9 +298,9 @@ class ImagePool(object):
             permuted_indices = torch.randperm(best_inputs.size(0))
             best_inputs=best_inputs[permuted_indices]
             self.add(best_inputs)
-        self.folder_size()
+        self.folder_size(task)
 
-    def folder_size(self):# added deekshita
+    def folder_size(self,task):# added deekshita
         size = 0
         print('root dir',self.root)
         # get size
@@ -506,7 +506,7 @@ class NAYER():
                     self.student_train(self.student, self.teacher)
 
         if itr==(self.args['syn_round'] + self.args['warmup'])-1:
-            self.data_pool.store_lowest_entropy_images(self.best_imgs,self.best_entropy,no_classes_known=list(torch.unique(targets).shape)[0],device=self.device)
+            self.data_pool.store_lowest_entropy_images(self.best_imgs,self.best_entropy,no_classes_known=list(torch.unique(targets).shape)[0],device=self.device,task=self._cur_task)
 
 
     def student_train(self, student, teacher):
